@@ -1,0 +1,117 @@
+x-airflow-common:
+  &airflow-common
+  build: .
+  env_file:
+    - .env
+  environment:
+    &airflow-common-env
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-api-server:8080/execution/"
+    AIRFLOW__API_AUTH__JWT_SECRET: "acbbd9e8fc136bae483c263140879faa6abd29d67b7b514f7efcb1925ec26e3a"
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: "120"
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./scripts:/opt/airflow/dags/scripts
+    - ./logs:/opt/airflow/logs
+    - ./output:/opt/airflow/output
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: airflow_postgres
+
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: always
+
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+
+    depends_on:
+      <<: *airflow-common-depends-on
+
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+
+    command: version
+
+
+  airflow-api-server:
+    <<: *airflow-common
+    container_name: airflow_api_server
+
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+    ports:
+      - "8081:8080"
+
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+    command: api-server
+
+    restart: always
+
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+    command: scheduler
+
+    restart: always
+
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow_dag_processor
+
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+    command: dag-processor
+
+    restart: always
+
+
+volumes:
+  postgres_data:

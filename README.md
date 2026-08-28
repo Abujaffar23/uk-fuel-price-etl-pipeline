@@ -164,7 +164,7 @@ Extract → Transform → Load
 ### Pipeline Logs
 
 
-![Pipeline Logs](Logs_Image.png)
+![Pipeline Logs](Logs_image.png)
 
 Apache Airflow provides logs for monitoring the execution of individual ETL tasks.
 

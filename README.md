@@ -76,7 +76,7 @@ Apache Airflow is responsible for orchestrating and scheduling the entire workfl
 ### DAG Workflow
 
 
-[Airflow DAG](Dags_Image.png)
+![Airflow DAG](Dags_Image.png)
 
 The ETL workflow is orchestrated using **Apache Airflow** through the `fuel_etl_dag.py` DAG.
 
@@ -164,7 +164,7 @@ Extract → Transform → Load
 ### Pipeline Logs
 
 
-[Logs](Logs_Image.png)
+![Logs](Logs_Image.png)
 
 Apache Airflow provides logs for monitoring the execution of individual ETL tasks.
 
